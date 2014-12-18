@@ -38,12 +38,6 @@ def main(rom_path, output_path):
 
 	# Randomize all fights
 	battle_regex = re.compile('(?s)\x00[\x01-\x03][\x01-\x03]\x00(?:.[\x01-\x06][\x01-\x03].)+\xff\x00\x00\x00')
-	'''
-	other_regex = re.compile('(?s)\x00[\x01-\x03]\x02\x00(?:.[\x01-\x06][\x01-\x03].)+\xff\x00\x00\x00')
-	x = map(lambda m : hex(m.start()), battle_regex.finditer(raw_data))
-	y = map(lambda m : hex(m.start()), other_regex.finditer(raw_data))
-	print filter(lambda t : t not in y, x)
-	'''
 
 	n_battles = 0
 	for match in battle_regex.finditer(raw_data):
@@ -51,7 +45,6 @@ def main(rom_path, output_path):
 		if match.start() >= 0x22000:
 			break
 		n_battles += 1
-		# print hex(match.start()), hex(match.end())
 		for i in range(match.start(), match.end(), 4):
 			if raw_data[i + 3] == '\x01':
 				virus_ind = ord(raw_data[i])
