@@ -5,6 +5,10 @@ import copy
 from collections import defaultdict
 from pprint import pprint
 
+N_CHIPS = 312
+# Shadows, Twinners
+banned_viruses = [0x3d, 0x3e, 0x3f, 0x97, 0x98, 0x99, 0x9a]
+
 def virus_level(virus):
 	if virus == 0 or virus >= 160:
 		return -1
@@ -40,34 +44,48 @@ def init_chip_data():
 	chip_names = chip_names.split('\n')
 
 	chip_data.append({})
-	for i in range(286):
+	for i in range(N_CHIPS):
 		code1, code2, code3, code4, code5, code6, filler, regsize, chip_type, power, num = struct.unpack('<BBBBBBIBBHH', rom_data[s : s + 16])
 		# chip_type seems to be a bitfield, only look at lsb for now
-		is_attack = chip_type & 1
+		is_attack = (chip_type & 1)
 		codes = filter(lambda x : x != 255, [code1, code2, code3, code4, code5, code6])
 		if num <= 200:
 			rank = chip_ranks[num - 1]
-		else:
+		elif num <= 286:
 			rank = 5
+
 		if num >= 1 and num <= 200:
 			name = chip_names[num - 1]
 		else:
 			name = ''
+
+		if name == 'VarSwrd':
+			power = 60
+			write_data(chr(60), s + 12)
+
+		# Conditional attacks
+		is_conditional = name in ['Spice1', 'Spice2', 'Spice3', 'BlkBomb1', 'BlkBomb2', 'BlkBomb3', 'GrabBack', 'GrabRvng', 'Snake', 'Team1', 'Slasher', 'NoBeam1', 'NoBeam2', 'NoBeam3']
+
 		chip = {
 			'name' : name,
 			'codes' : codes,
 			'is_attack' : is_attack,
+			'is_conditional' : int(is_conditional),
 			'regsize' : regsize,
 			'power' : power,
 			'num' : num,
 			'rank' : rank
 		}
+
 		chip_data.append(chip)
 		s += 32
 
 def write_data(str, offset):
 	for i in range(len(str)):
 		randomized_data[offset + i] = str[i]
+
+def decompress_data():
+	offset = 0x765f10
 
 def virus_replace(ind):
 	# Ignore navis for now
@@ -85,7 +103,10 @@ def virus_replace(ind):
 		virus_hp, virus_attack = virus_data[i]
 		if virus_hp == -1:
 			continue
-		if virus_level(i) == virus_level(ind):
+		# Special case the mettaur because of tutorial
+		if ind == 1 and virus_hp > 100:
+			continue
+		if virus_level(i) == virus_level(ind) and i not in banned_viruses:
 			candidates.append(i)
 	return random.choice(candidates)
 
@@ -104,14 +125,18 @@ def randomize_viruses():
 				write_data(chr(virus_replace(virus_ind)), i)
 	print 'randomized %d battles' % n_battles
 
-def generate_chip_permutation():
+def generate_chip_permutation(allow_conditional_attacks = False):
 	# 200 standard chips
 	# 86 mega chips
 	# giga chips are weird but nobody cares
 	all_chips = defaultdict(list)
-	for chip_ind in range(1, 287):
+	for chip_ind in range(1, N_CHIPS + 1):
 		chip = chip_data[chip_ind]
-		chip_id = chip['rank'] + 10 * chip['is_attack']
+		if allow_conditional_attacks:
+			is_attack = chip['is_attack']
+		else:
+			is_attack = (chip['is_attack'] & (1 - chip['is_conditional']))
+		chip_id = chip['rank'] + 10 * is_attack
 		all_chips[chip_id].append(chip_ind)
 	# Do the shuffling
 	chip_map = {}
@@ -122,38 +147,76 @@ def generate_chip_permutation():
 			chip_map[old_chip] = new_chip
 	return chip_map
 
+def get_new_code(old_chip, old_code, new_chip):
+	if old_code == 26 and old_code in chip_data[new_chip]['codes']:
+		return old_code
+	try:
+		old_code_ind = chip_data[old_chip]['codes'].index(old_code)
+		new_codes = chip_data[new_chip]['codes']
+		new_code_ind = old_code_ind % len(new_codes)
+		return new_codes[new_code_ind]
+	except ValueError:
+		return old_code
+
 def randomize_folders():
 	s = 0xcbdc
 
 	n_folders = 0
 	permutations = []
 	while True:
-		folder_start = s
-		# Check if this is the end
-		# There are actually 14 folders, the last 3 are for tutorial only
-		# Better to just leave them alone
-		if n_folders == 11:
+		if n_folders == 14:
 			break
+		folder_start = s
+		# There are 14 folders, the last 3 are tutorial only
 		n_folders += 1
-		chip_map = generate_chip_permutation()
+		is_tutorial = (n_folders >= 12 and n_folders <= 14)
+		if is_tutorial:
+			chip_map = permutations[0]
+		else:
+			chip_map = generate_chip_permutation()
 		permutations.append(chip_map)
 		for i in range(30):
 			old_chip, old_code = struct.unpack('<HH', rom_data[s:s+4])
 			new_chip = chip_map[old_chip]
 			# Need to determine code
-			try:
-				old_code_ind = chip_data[old_chip]['codes'].index(old_code)
-				new_codes = chip_data[new_chip]['codes']
-				new_code_ind = old_code_ind % len(new_codes)
-				new_code = new_codes[new_code_ind]
-			except ValueError:
-				# whoops
+			if is_tutorial:
+				# tutorial folder, dont change the code
 				new_code = old_code
+			else:
+				new_code = get_new_code(old_chip, old_code, new_chip)
 
 			chipstr = struct.pack('<HH', new_chip, new_code)
 			write_data(chipstr, s)
 			s += 4
 	print 'randomized %d folders' % n_folders
+
+def randomize_virus_drops():
+	offset = 0x160a8
+	# Iceball M, Yoyo1 G, Wind *
+	special_chips = [(25, 12), (69, 6), (143, 26)]
+	for virus_ind in range(244):
+		for i in range(28):
+			reward = struct.unpack('<H', rom_data[offset:offset+2])[0]
+			reward_type = reward >> 14;
+			# 0 = chip, 1 = zenny, 2 = health, 3 = should not happen (terminator)
+			if reward_type == 0:
+				old_code = (reward >> 9) & 0x1f;
+				old_chip = reward & 0x1ff;
+
+				if (old_chip, old_code) in special_chips:
+					new_code = old_code
+					new_chip = old_chip
+				else:
+					chip_map = generate_chip_permutation(allow_conditional_attacks = True)
+					new_chip = chip_map[old_chip]
+					new_code = get_new_code(old_chip, old_code, new_chip)
+
+				new_reward = new_chip + (new_code << 9)
+				write_data(struct.pack('<H', new_reward), offset)
+			elif reward_type == 1:
+				if random.random() < 0.5:
+					new_chip = random.randint(1, 200)
+			offset += 2
 
 def main(rom_path, output_path):
 	random.seed()
@@ -164,6 +227,7 @@ def main(rom_path, output_path):
 
 	randomize_viruses()
 	randomize_folders()
+	randomize_virus_drops()
 
 	open(output_path, 'wb').write(''.join(randomized_data))
 
