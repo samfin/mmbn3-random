@@ -9,9 +9,17 @@ N_CHIPS = 312
 # Shadows, Twinners
 banned_viruses = [0x3d, 0x3e, 0x3f, 0x97, 0x98, 0x99, 0x9a]
 
+special_virus_level = {
+	0x2: 0,
+	0x5f: 1,
+	0x87: 1
+}
+
 def virus_level(virus):
-	if virus == 0 or virus >= 160:
+	if virus == 0 or virus >= 0x9f:
 		return -1
+	if virus in special_virus_level:
+		return special_virus_level[virus]
 	if virus < 0x45:
 		return (virus + 3) % 4
 	elif virus < 0x4a:
