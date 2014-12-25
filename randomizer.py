@@ -8,6 +8,8 @@ from pprint import pprint
 N_CHIPS = 312
 # Shadows, Twinners
 banned_viruses = [0x3d, 0x3e, 0x3f, 0x97, 0x98, 0x99, 0x9a]
+# Punk = airshot? anticheat pls
+banned_chips = [0x110]
 
 special_virus_level = {
 	0x2: 0,
@@ -64,15 +66,16 @@ def init_chip_data():
 		# chip_type seems to be a bitfield, only look at lsb for now
 		is_attack = (chip_type & 1)
 		codes = filter(lambda x : x != 255, [code1, code2, code3, code4, code5, code6])
+
 		if num <= 200:
 			rank = chip_ranks[num - 1]
-		elif num <= 286:
-			rank = 5
+		else:
+			rank = chip_ranks[i]
 
 		if num >= 1 and num <= 200:
 			name = chip_names[num - 1]
 		else:
-			name = ''
+			name = chip_names[i]
 
 		if name == 'VarSwrd':
 			power = 60
@@ -84,12 +87,12 @@ def init_chip_data():
 		chip = {
 			'name' : name,
 			'codes' : codes,
-			'is_attack' : is_attack,
-			'is_conditional' : int(is_conditional),
+			'is_attack' : bool(is_attack),
+			'is_conditional' : is_conditional,
 			'regsize' : regsize,
 			'power' : power,
 			'num' : num,
-			'rank' : rank
+			'rank' : rank,
 		}
 
 		chip_data.append(chip)
@@ -224,7 +227,6 @@ def randomize_gmds():
 				for i in range(len(zenny_str)):
 					new_data[match_offset + i] = ord(zenny_str[i])
 
-
 			new_script = ''.join(map(chr, new_data))
 			new_scripts[script_ptr] = compress_data(new_script)
 
@@ -296,17 +298,13 @@ def randomize_viruses():
 	print 'randomized %d battles' % n_battles
 
 def generate_chip_permutation(allow_conditional_attacks = False):
-	# 200 standard chips
-	# 86 mega chips
-	# giga chips are weird but nobody cares
 	all_chips = defaultdict(list)
 	for chip_ind in range(1, N_CHIPS + 1):
 		chip = chip_data[chip_ind]
-		if allow_conditional_attacks:
-			is_attack = chip['is_attack']
-		else:
-			is_attack = (chip['is_attack'] & (1 - chip['is_conditional']))
-		chip_id = chip['rank'] + 10 * is_attack
+		chip_id = chip['rank']
+		# Treat standard attacking chips differently from standard nonattacking chips
+		if chip['is_attack'] and (allow_conditional_attacks or not chip['is_conditional']) and chip['rank'] < 10:
+			chip_id += 1000
 		all_chips[chip_id].append(chip_ind)
 	# Do the shuffling
 	chip_map = {}
@@ -365,14 +363,23 @@ def randomize_virus_drops():
 	# Iceball M, Yoyo1 G, Wind *
 	special_chips = [(25, 12), (69, 6), (143, 26)]
 	for virus_ind in range(244):
+		zenny_queue = []
+		last_chip = None
 		for i in range(28):
+			if i % 14 == 0:
+				last_chip = None
 			reward = struct.unpack('<H', rom_data[offset:offset+2])[0]
-			reward_type = reward >> 14;
 			# 0 = chip, 1 = zenny, 2 = health, 3 = should not happen (terminator)
+			reward_type = reward >> 14;
+			# Number from 0-6
+			buster_rank = (i % 14) / 2
 			if reward_type == 0:
+				# Read the chip data
 				old_code = (reward >> 9) & 0x1f;
 				old_chip = reward & 0x1ff;
+				last_chip = (old_chip, old_code)
 
+				# Randomize the chip
 				if (old_chip, old_code) in special_chips:
 					new_code = old_code
 					new_chip = old_chip
@@ -380,12 +387,32 @@ def randomize_virus_drops():
 					chip_map = generate_chip_permutation(allow_conditional_attacks = True)
 					new_chip = chip_map[old_chip]
 					new_code = get_new_code(old_chip, old_code, new_chip)
-
 				new_reward = new_chip + (new_code << 9)
 				write_data(struct.pack('<H', new_reward), offset)
+
+				# Discharge the queue
+				for old_offset in zenny_queue:
+					chip_map = generate_chip_permutation(allow_conditional_attacks = True)
+					new_chip = chip_map[old_chip]
+					new_code = get_new_code(old_chip, old_code, new_chip)
+					new_reward = new_chip + (new_code << 9)
+					write_data(struct.pack('<H', new_reward), old_offset)
+				zenny_queue = []
+
 			elif reward_type == 1:
-				if random.random() < 0.5:
-					new_chip = random.randint(1, 200)
+				# Only turn lvl 5+ drops to chips
+				if buster_rank >= 2:
+					if last_chip is None:
+						# No chip yet, queue it for later
+						zenny_queue.append( (offset) )
+					else:
+						old_chip, old_code = last_chip
+						chip_map = generate_chip_permutation(allow_conditional_attacks = True)
+						new_chip = chip_map[old_chip]
+						new_code = get_new_code(old_chip, old_code, new_chip)
+						new_reward = new_chip + (new_code << 9)
+						write_data(struct.pack('<H', new_reward), offset)
+
 			offset += 2
 	print 'randomized virus drops'
 
