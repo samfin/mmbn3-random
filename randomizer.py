@@ -217,12 +217,12 @@ def randomize_gmds():
 					new_data[match_offset + i] = new_chip
 					new_data[match_offset + i+1] = new_code
 
-			# Double zenny tables
+			# Multiply zenny tables
 			for match in zenny_regex.finditer(script_data):
 				match_offset = match.start() + 5
 				zennys = list(struct.unpack('<IIIIIIIIIIIIIIII', match.groups()[0]))
 				for i in range(16):
-					zennys[i] *= 2
+					zennys[i] = (zennys[i] * 3) / 2
 				zenny_str = struct.pack('<IIIIIIIIIIIIIIII', *zennys)
 				for i in range(len(zenny_str)):
 					new_data[match_offset + i] = ord(zenny_str[i])
