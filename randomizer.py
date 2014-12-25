@@ -6,8 +6,8 @@ from collections import defaultdict
 from pprint import pprint
 
 N_CHIPS = 312
-# Shadows, Twinners
-banned_viruses = [0x3d, 0x3e, 0x3f, 0x97, 0x98, 0x99, 0x9a]
+# Shadows, Twinners, mushy
+banned_viruses = [0x3d, 0x3e, 0x3f, 0x97, 0x98, 0x99, 0x9a, 0x31, 0x32, 0x33, 0x34]
 # Punk = airshot? anticheat pls
 banned_chips = [0x110]
 
@@ -47,6 +47,8 @@ def read_halfword(offset):
 	return struct.unpack('<H', rom_data[offset:offset+2])[0]
 def read_word(offset):
 	return struct.unpack('<I', rom_data[offset:offset+4])[0]
+def read_dblword(offset):
+	return struct.unpack('<Q', rom_data[offset:offset+8])[0]
 
 def init_chip_data():
 	s = 0x11530
@@ -179,6 +181,7 @@ def compress_data(raw_data):
 	return ''.join(map(chr, output))
 
 def randomize_gmds():
+	# does not work in blue!
 	base_offset = 0x28810
 	free_space = 0x67c000
 	map_data = {
@@ -416,6 +419,38 @@ def randomize_virus_drops():
 			offset += 2
 	print 'randomized virus drops'
 
+def randomize_shops():
+	shop_regex = re.compile('(?s)[\x00-\x01]\x00\x00\x00...\x08...\x02.\x00\x00\x00')
+	last_ind = 0
+	n_shops = 0
+	# white only: blue is 0x43dbc
+	item_data_offset = 0x44bc8
+	first_shop = None
+	for match in shop_regex.finditer(rom_data):
+		shop_offset = match.start()
+		n_shops += 1
+		currency, filler, first_item, n_items = struct.unpack('<IIII', rom_data[shop_offset: shop_offset + 16])
+		if first_shop is None:
+			first_shop = first_item
+		# Convert RAM address to ROM address
+		item_offset = first_item - first_shop + item_data_offset
+		while True:
+			t = read_dblword(item_offset)
+			if t == 0 or n_items < 0:
+				break
+			item_type, stock, old_chip, old_code, filler, price = struct.unpack('<BBHBBH', rom_data[item_offset: item_offset + 8])
+			# Only care about chips
+			if item_type == 2:
+				chip_map = generate_chip_permutation()
+				new_chip = chip_map[old_chip]
+				new_code = random.choice(chip_data[new_chip]['codes'])
+				new_item = struct.pack('<BBHBBH', item_type, stock, new_chip, new_code, filler, price)
+				write_data(new_item, item_offset)
+			item_offset += 8
+			n_items -= 1
+
+	print 'randomized %d shops' % n_shops
+
 def main(rom_path, output_path):
 	random.seed()
 	init_rom_data(rom_path)
@@ -427,6 +462,7 @@ def main(rom_path, output_path):
 	randomize_folders()
 	randomize_virus_drops()
 	randomize_gmds()
+	randomize_shops()
 
 	open(output_path, 'wb').write(''.join(randomized_data))
 
