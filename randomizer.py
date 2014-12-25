@@ -9,6 +9,7 @@ N_CHIPS = 312
 # Shadows, Twinners, mushy
 banned_viruses = [0x3d, 0x3e, 0x3f, 0x97, 0x98, 0x99, 0x9a, 0x31, 0x32, 0x33, 0x34]
 # Punk = airshot? anticheat pls
+# Todo: actually read this somewhere
 banned_chips = [0x110]
 
 special_virus_level = {
@@ -451,6 +452,25 @@ def randomize_shops():
 
 	print 'randomized %d shops' % n_shops
 
+def randomize_number_trader():
+	# 3e 45 cc 86 90 18 4f 09 61 e9
+	reward_offset = 0x47928
+	n_rewards = 0
+	while True:
+		reward_type, old_code, old_chip, encrypted_number = struct.unpack('<BBH8s', rom_data[reward_offset : reward_offset + 12])
+		if reward_type == 0xff:
+			break
+		if reward_type == 0:
+			chip_map = generate_chip_permutation()
+			new_chip = chip_map[old_chip]
+			new_code = get_new_code(old_chip, old_code, new_chip)
+			new_reward = struct.pack('<BBH8s', reward_type, new_code, new_chip, encrypted_number)
+			write_data(new_reward, reward_offset)
+		reward_offset += 12
+		n_rewards += 1
+	print 'randomized %d number trader rewards' % n_rewards
+
+
 def main(rom_path, output_path):
 	random.seed()
 	init_rom_data(rom_path)
@@ -463,6 +483,7 @@ def main(rom_path, output_path):
 	randomize_virus_drops()
 	randomize_gmds()
 	randomize_shops()
+	randomize_number_trader()
 
 	open(output_path, 'wb').write(''.join(randomized_data))
 
