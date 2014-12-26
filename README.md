@@ -15,3 +15,6 @@ Features:
 - GMD zenny drops increased by 50%
 - Randomizes shop chips
 - Randomizes number trader chips
+- Reduce VarSwrd power to 60 from 160
+
+Big thanks to Prof9 and Rockman.exe community for idea and hacking guides!
