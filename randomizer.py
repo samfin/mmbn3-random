@@ -6,6 +6,7 @@ from collections import defaultdict
 from pprint import pprint
 
 N_CHIPS = 312
+N_VIRUSES = 
 # Shadows, Twinners, mushy
 banned_viruses = [0x3d, 0x3e, 0x3f, 0x40, 0x97, 0x98, 0x99, 0x9a, 0x31, 0x32, 0x33, 0x34]
 # Punk = airshot? anticheat pls
@@ -265,6 +266,8 @@ def randomize_gmds():
 
 def virus_replace(ind):
 	# Ignore navis for now
+	if ind == 0xf0:
+		return 0xf2
 	if ind >= 168:
 		return ind
 	# Also ignore coldhead, windbox, yort1 for now
@@ -282,7 +285,7 @@ def virus_replace(ind):
 		# Special case the mettaur because of tutorial
 		if ind == 1 and virus_hp > 100:
 			continue
-		if virus_level(i) == virus_level(ind) and i not in banned_viruses:
+		if virus_level(i) >= virus_level(ind) and i not in banned_viruses:
 			candidates.append(i)
 	return random.choice(candidates)
 
@@ -301,13 +304,18 @@ def randomize_viruses():
 				write_data(chr(virus_replace(virus_ind)), i)
 	print 'randomized %d battles' % n_battles
 
-def generate_chip_permutation(allow_conditional_attacks = False):
+def generate_chip_permutation(allow_conditional_attacks = False, uber_random = True):
 	all_chips = defaultdict(list)
 	for chip_ind in range(1, N_CHIPS + 1):
 		chip = chip_data[chip_ind]
 		chip_id = chip['rank']
+		if uber_random:
+			if chip_id >= 10:
+				chip_id = 10
+			elif chip_id >= 0:
+				chip_id = 0
 		# Treat standard attacking chips differently from standard nonattacking chips
-		if chip['is_attack'] and (allow_conditional_attacks or not chip['is_conditional']) and chip['rank'] < 10:
+		if chip['is_attack'] and (allow_conditional_attacks or not chip['is_conditional']) and chip_id < 10:
 			chip_id += 1000
 		all_chips[chip_id].append(chip_ind)
 	# Do the shuffling
@@ -470,6 +478,11 @@ def randomize_number_trader():
 		n_rewards += 1
 	print 'randomized %d number trader rewards' % n_rewards
 
+def rape_mode():
+	offset = 0x2b16a
+	magic = 0x2164
+	write_data(struct.pack('<H', magic), offset)
+	print 'you are so fucked'
 
 def main(rom_path, output_path):
 	random.seed()
@@ -484,6 +497,7 @@ def main(rom_path, output_path):
 	randomize_gmds()
 	randomize_shops()
 	randomize_number_trader()
+	rape_mode()
 
 	open(output_path, 'wb').write(''.join(randomized_data))
 
