@@ -1,12 +1,14 @@
 import re
 import random
+import time
 import struct
 import copy
 from collections import defaultdict
 from pprint import pprint
 
+from rom import Rom
+
 N_CHIPS = 312
-N_VIRUSES = 
 # Shadows, Twinners, mushy
 banned_viruses = [0x3d, 0x3e, 0x3f, 0x40, 0x97, 0x98, 0x99, 0x9a, 0x31, 0x32, 0x33, 0x34]
 # Punk = airshot? anticheat pls
@@ -36,24 +38,12 @@ def init_virus_data():
 	virus_data = open('virus_data.txt', 'r').read().strip()
 	virus_data = map(lambda str: map(int, str.split(' ')), virus_data.split('\n'))
 
-# TODO: Read from ROM
 def init_rom_data(rom_path):
-	global rom_data
-	global randomized_data
-	rom_data = open(rom_path, 'rb').read()
-	randomized_data = list(rom_data)
-
-def read_byte(offset):
-	return ord(rom_data[offset])
-def read_halfword(offset):
-	return struct.unpack('<H', rom_data[offset:offset+2])[0]
-def read_word(offset):
-	return struct.unpack('<I', rom_data[offset:offset+4])[0]
-def read_dblword(offset):
-	return struct.unpack('<Q', rom_data[offset:offset+8])[0]
+	global rom
+	rom = Rom(rom_path)
 
 def init_chip_data():
-	s = 0x11530
+	rom.seek(0x11530)
 	global chip_data
 	chip_data = []
 
@@ -66,7 +56,7 @@ def init_chip_data():
 
 	chip_data.append({})
 	for i in range(N_CHIPS):
-		code1, code2, code3, code4, code5, code6, filler, regsize, chip_type, power, num = struct.unpack('<BBBBBBIBBHH', rom_data[s : s + 16])
+		code1, code2, code3, code4, code5, code6, filler, regsize, chip_type, power, num, more_filler = struct.unpack('<BBBBBBIBBHH16s', rom.read(32))
 		# chip_type seems to be a bitfield, only look at lsb for now
 		is_attack = (chip_type & 1)
 		codes = filter(lambda x : x != 255, [code1, code2, code3, code4, code5, code6])
@@ -83,7 +73,7 @@ def init_chip_data():
 
 		if name == 'VarSwrd':
 			power = 60
-			write_data(chr(60), s + 12)
+			rom.write_byte(power, rom.r_offset - 32 + 12)
 
 		# Conditional attacks
 		is_conditional = name in ['Spice1', 'Spice2', 'Spice3', 'BlkBomb1', 'BlkBomb2', 'BlkBomb3', 'GrabBack', 'GrabRvng', 'Snake', 'Team1', 'Slasher', 'NoBeam1', 'NoBeam2', 'NoBeam3']
@@ -100,92 +90,11 @@ def init_chip_data():
 		}
 
 		chip_data.append(chip)
-		s += 32
-
-def write_data(str, offset):
-	for i in range(len(str)):
-		randomized_data[offset + i] = str[i]
-
-def decompress_data(offset):
-	global compressed_data_end
-	decompressed_size = read_word(offset) >> 8;
-	offset += 4
-	output = []
-	while len(output) < decompressed_size:
-		flags = read_byte(offset)
-		offset += 1
-		for i in range(8):
-			is_special = bool(flags & 0x80)
-			if is_special:
-				a = read_byte(offset)
-				b = read_byte(offset+1)
-				x_len = (a >> 4) + 3
-				x_offset = (b + ((a & 0xf) << 8))
-				start = len(output) - 1 - x_offset
-				for j in range(x_len):
-					output.append(output[start + j])
-				offset += 2
-			else:
-				output.append(read_byte(offset))
-				offset += 1
-			flags <<= 1;
-	output = output[:decompressed_size]
-	compressed_data_end = offset
-	return ''.join(map(lambda x : chr(x), output))
-
-def compress_data(raw_data):
-	ops = []
-	i = 0
-	data_len = len(raw_data)
-	while i < data_len:
-		lo = 2
-		hi = min(18, len(raw_data) - i)
-		start = max(0, i - 4096)
-		last_match_ind = -1
-		while lo < hi:
-			mid = (lo + hi + 1) / 2
-			ss = raw_data[i : i + mid]
-			t = raw_data.find(ss, start)
-			if t < i:
-				# match found
-				last_match_ind = t
-				lo = mid
-			else:
-				hi = mid - 1
-		if lo < 3:
-			ops.append((0, ord(raw_data[i])))
-			i += 1
-		else:
-			ops.append((i - last_match_ind, lo))
-			i += lo
-	# Add some padding
-	n_padding = (8 - (len(ops) % 8)) % 8
-	for i in range(n_padding):
-		ops.append((0, 0))
-	# Encode the string
-	output = [0x10, data_len & 0xff, (data_len >> 8) & 0xff, (data_len >> 16) & 0xff]
-	for i in range(0, len(ops), 8):
-		flags = 0
-		for j in range(8):
-			flags <<= 1
-			if ops[i + j][0] > 0:
-				flags |= 1
-		output.append(flags)
-		for j in range(8):
-			if ops[i + j][0] == 0:
-				output.append(ops[i + j][1])
-			else:
-				o, l = ops[i + j]
-				o -= 1
-				l -= 3
-				output.append( ((l & 0xf) << 4) + ((o >> 8) & 0xf) )
-				output.append(o & 0xff)
-	return ''.join(map(chr, output))
 
 def randomize_gmds():
 	# does not work in blue!
 	base_offset = 0x28810
-	free_space = 0x67c000
+	free_space_offset = 0x67c000
 	map_data = {
 		0x10: [0, 1, 2],
 		0x11: [0, 1],
@@ -203,11 +112,11 @@ def randomize_gmds():
 	end_addr = -1
 	for area, subareas in map_data.iteritems():
 		for subarea in subareas:
-			script_ptr = read_word(base_offset + 4 * area) - 0x08000000 + 4 * subarea
+			script_ptr = rom.read_word(base_offset + 4 * area) - 0x08000000 + 4 * subarea
 			earliest_script = min(earliest_script, script_ptr)
-			script_addr = read_word(script_ptr) - 0x08000000
-			script_data = decompress_data(script_addr)
-			end_addr = max(end_addr, compressed_data_end)
+			script_addr = rom.read_word(script_ptr) - 0x08000000
+			script_data = rom.read_lz77(script_addr)
+			end_addr = max(end_addr, rom.lz77_end)
 			new_data = map(ord, script_data)
 
 			# Replace chip tables
@@ -233,35 +142,41 @@ def randomize_gmds():
 					new_data[match_offset + i] = ord(zenny_str[i])
 
 			new_script = ''.join(map(chr, new_data))
-			new_scripts[script_ptr] = compress_data(new_script)
+			new_scripts[script_ptr] = rom.lz77_compress(new_script)
 
-	# Get the missing scripts
-	script_ptr = earliest_script
+	# Get the missing scripts that were not edited
+	rom.seek(earliest_script)
 	while True:
-		script_addr = read_word(script_ptr)
+		offset = rom.r_offset
+		script_addr = rom.read_word()
 		if script_addr == 0:
 			break
-		if script_ptr not in new_scripts:
+		if offset not in new_scripts:
 			script_addr -= 0x08000000
-			script_data = compress_data(decompress_data(script_addr))
-			new_scripts[script_ptr] = script_data
-		script_ptr += 4
+			script_data = rom.lz77_compress(rom.read_lz77(script_addr))
+			new_scripts[offset] = script_data
 
-	start_addr = read_word(earliest_script) - 0x08000000
+	script_offset = rom.read_word(earliest_script) - 0x08000000
 	# Write all the scripts back
+	n_full_writes = 0
 	for script_ptr, script_data in new_scripts.iteritems():
-		if start_addr + len(script_data) < end_addr:
-			write_data(script_data, start_addr)
-			write_data(struct.pack('<I', start_addr + 0x08000000), script_ptr)
-			start_addr += len(script_data)
+		# Check if there is space for this script in the script memory region
+		if script_offset + len(script_data) < end_addr:
+			rom.write(script_data, script_offset)
+			rom.write_word(script_offset + 0x08000000, script_ptr)
+			script_offset += len(script_data)
 			# Pad up to multiple of 4
-			start_addr += (4 - start_addr) % 4
+			script_offset += (4 - script_offset) % 4
 		else:
-			write_data(script_data, free_space)
-			write_data(struct.pack('<I', free_space + 0x08000000), script_ptr)
-			free_space += len(script_data)
+			# No space here, write it somewhere else
+			n_full_writes += 1
+			rom.write(script_data, free_space_offset)
+			rom.write_word(free_space_offset + 0x08000000, script_ptr)
+			free_space_offset += len(script_data)
 			# Pad up to multiple of 4
-			free_space += (4 - free_space) % 4
+			free_space_offset += (4 - free_space_offset) % 4
+	# Quick sanity check
+	assert(n_full_writes <= 1)
 	print 'randomized gmds'
 
 def virus_replace(ind):
@@ -293,15 +208,19 @@ def randomize_viruses():
 	battle_regex = re.compile('(?s)\x00[\x01-\x03][\x01-\x03]\x00(?:.[\x01-\x06][\x01-\x03].)+\xff\x00\x00\x00')
 
 	n_battles = 0
-	for match in battle_regex.finditer(rom_data):
+	print 'randomizing the viruses'
+	for match in battle_regex.finditer(rom.rom_data):
 		# Sanity check
 		if match.start() >= 0x22000:
 			break
 		n_battles += 1
-		for i in range(match.start(), match.end(), 4):
-			if rom_data[i + 3] == '\x01':
-				virus_ind = ord(rom_data[i])
-				write_data(chr(virus_replace(virus_ind)), i)
+		rom.seek(match.start())
+		battle_data = list(rom.read(match.end() - match.start()))
+		for i in range(0, len(battle_data), 4):
+			if battle_data[i + 3] == '\x01':
+				virus_ind = ord(battle_data[i])
+				battle_data[i] = chr(virus_replace(virus_ind))
+		rom.write(battle_data)
 	print 'randomized %d battles' % n_battles
 
 def generate_chip_permutation(allow_conditional_attacks = False, uber_random = True):
@@ -325,6 +244,8 @@ def generate_chip_permutation(allow_conditional_attacks = False, uber_random = T
 		random.shuffle(chips)
 		for old_chip, new_chip in zip(keys, chips):
 			chip_map[old_chip] = new_chip
+	# print chip_map[1]
+	# raw_input()
 	return chip_map
 
 def get_new_code(old_chip, old_code, new_chip):
@@ -339,24 +260,21 @@ def get_new_code(old_chip, old_code, new_chip):
 		return old_code
 
 def randomize_folders():
-	s = 0xcbdc
+	rom.seek(0xcbdc)
+	n_folders = 14
 
-	n_folders = 0
+	# Keep track of chip permutations so we can reuse them for tutorial
 	permutations = []
-	while True:
-		if n_folders == 14:
-			break
-		folder_start = s
-		# There are 14 folders, the last 3 are tutorial only
-		n_folders += 1
-		is_tutorial = (n_folders >= 12 and n_folders <= 14)
+	# There are 14 folders, the last 3 are tutorial only
+	for folder_ind in range(14):
+		is_tutorial = (folder_ind >= 11)
 		if is_tutorial:
 			chip_map = permutations[0]
 		else:
 			chip_map = generate_chip_permutation()
 		permutations.append(chip_map)
 		for i in range(30):
-			old_chip, old_code = struct.unpack('<HH', rom_data[s:s+4])
+			old_chip, old_code = struct.unpack('<HH', rom.read(4))
 			new_chip = chip_map[old_chip]
 			# Need to determine code
 			if is_tutorial:
@@ -366,12 +284,11 @@ def randomize_folders():
 				new_code = get_new_code(old_chip, old_code, new_chip)
 
 			chipstr = struct.pack('<HH', new_chip, new_code)
-			write_data(chipstr, s)
-			s += 4
+			rom.write(chipstr)
 	print 'randomized %d folders' % n_folders
 
 def randomize_virus_drops():
-	offset = 0x160a8
+	rom.seek(0x160a8)
 	# Iceball M, Yoyo1 G, Wind *
 	special_chips = [(25, 12), (69, 6), (143, 26)]
 	for virus_ind in range(244):
@@ -380,7 +297,8 @@ def randomize_virus_drops():
 		for i in range(28):
 			if i % 14 == 0:
 				last_chip = None
-			reward = struct.unpack('<H', rom_data[offset:offset+2])[0]
+			offset = rom.r_offset
+			reward = rom.read_halfword()
 			# 0 = chip, 1 = zenny, 2 = health, 3 = should not happen (terminator)
 			reward_type = reward >> 14;
 			# Number from 0-6
@@ -400,15 +318,14 @@ def randomize_virus_drops():
 					new_chip = chip_map[old_chip]
 					new_code = get_new_code(old_chip, old_code, new_chip)
 				new_reward = new_chip + (new_code << 9)
-				write_data(struct.pack('<H', new_reward), offset)
+				rom.write_halfword(new_reward)
 
 				# Discharge the queue
 				for old_offset in zenny_queue:
 					chip_map = generate_chip_permutation(allow_conditional_attacks = True)
 					new_chip = chip_map[old_chip]
 					new_code = get_new_code(old_chip, old_code, new_chip)
-					new_reward = new_chip + (new_code << 9)
-					write_data(struct.pack('<H', new_reward), old_offset)
+					rom.write_halfword(new_chip + (new_code << 9), old_offset)
 				zenny_queue = []
 
 			elif reward_type == 1:
@@ -416,16 +333,14 @@ def randomize_virus_drops():
 				if buster_rank >= 2:
 					if last_chip is None:
 						# No chip yet, queue it for later
-						zenny_queue.append( (offset) )
+						zenny_queue.append(offset)
 					else:
 						old_chip, old_code = last_chip
 						chip_map = generate_chip_permutation(allow_conditional_attacks = True)
 						new_chip = chip_map[old_chip]
 						new_code = get_new_code(old_chip, old_code, new_chip)
 						new_reward = new_chip + (new_code << 9)
-						write_data(struct.pack('<H', new_reward), offset)
-
-			offset += 2
+						rom.write_halfword(new_reward)
 	print 'randomized virus drops'
 
 def randomize_shops():
@@ -435,26 +350,27 @@ def randomize_shops():
 	# white only: blue is 0x43dbc
 	item_data_offset = 0x44bc8
 	first_shop = None
-	for match in shop_regex.finditer(rom_data):
+	for match in shop_regex.finditer(rom.rom_data):
 		shop_offset = match.start()
 		n_shops += 1
-		currency, filler, first_item, n_items = struct.unpack('<IIII', rom_data[shop_offset: shop_offset + 16])
+		currency, filler, first_item, n_items = struct.unpack('<IIII', rom.read(16, shop_offset))
 		if first_shop is None:
 			first_shop = first_item
 		# Convert RAM address to ROM address
 		item_offset = first_item - first_shop + item_data_offset
-		while True:
-			t = read_dblword(item_offset)
-			if t == 0 or n_items < 0:
+		# n_items is actually an upper bound on number of items, not exact
+		# Terminate if upper bound is met or on zero
+		while n_items >= 0 and rom.read_dblword(item_offset) != 0:
+			if rom.read_dblword(item_offset) == 0 or n_items < 0:
 				break
-			item_type, stock, old_chip, old_code, filler, price = struct.unpack('<BBHBBH', rom_data[item_offset: item_offset + 8])
-			# Only care about chips
+			item_type, stock, old_chip, old_code, filler, price = struct.unpack('<BBHBBH', rom.read(8, item_offset))
+			# We only care about chips
 			if item_type == 2:
 				chip_map = generate_chip_permutation()
 				new_chip = chip_map[old_chip]
 				new_code = random.choice(chip_data[new_chip]['codes'])
 				new_item = struct.pack('<BBHBBH', item_type, stock, new_chip, new_code, filler, price)
-				write_data(new_item, item_offset)
+				rom.write(new_item, item_offset)
 			item_offset += 8
 			n_items -= 1
 
@@ -462,10 +378,10 @@ def randomize_shops():
 
 def randomize_number_trader():
 	# 3e 45 cc 86 90 18 4f 09 61 e9
-	reward_offset = 0x47928
+	rom.seek(0x47928)
 	n_rewards = 0
 	while True:
-		reward_type, old_code, old_chip, encrypted_number = struct.unpack('<BBH8s', rom_data[reward_offset : reward_offset + 12])
+		reward_type, old_code, old_chip, encrypted_number = struct.unpack('<BBH8s', rom.read(12))
 		if reward_type == 0xff:
 			break
 		if reward_type == 0:
@@ -473,15 +389,14 @@ def randomize_number_trader():
 			new_chip = chip_map[old_chip]
 			new_code = get_new_code(old_chip, old_code, new_chip)
 			new_reward = struct.pack('<BBH8s', reward_type, new_code, new_chip, encrypted_number)
-			write_data(new_reward, reward_offset)
-		reward_offset += 12
+			rom.write(new_reward)
 		n_rewards += 1
 	print 'randomized %d number trader rewards' % n_rewards
 
 def rape_mode():
 	offset = 0x2b16a
 	magic = 0x2164
-	write_data(struct.pack('<H', magic), offset)
+	rom.write_halfword(magic, offset)
 	print 'you are so fucked'
 
 def main(rom_path, output_path):
@@ -499,8 +414,8 @@ def main(rom_path, output_path):
 	randomize_number_trader()
 	rape_mode()
 
-	open(output_path, 'wb').write(''.join(randomized_data))
+	open(output_path, 'wb').write(''.join(rom.buffer))
 
 
 if __name__ == '__main__':
-	main('white.gba', 'white_randomized.gba')
+	main('white.gba', 'random.gba')
