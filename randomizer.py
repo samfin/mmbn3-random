@@ -7,19 +7,11 @@ from collections import defaultdict
 from pprint import pprint
 
 from rom import Rom
+import enemies
 
 N_CHIPS = 312
-# Shadows, Twinners, mushy
-banned_viruses = [0x3d, 0x3e, 0x3f, 0x40, 0x97, 0x98, 0x99, 0x9a, 0x31, 0x32, 0x33, 0x34]
-# Punk = airshot? anticheat pls
-# Todo: actually read this somewhere
+banned_viruses = ['Shadow', 'Twins', 'Mushy', 'Number1', 'Number2', 'Number3']
 banned_chips = [0x110]
-
-special_virus_level = {
-	0x2: 0,
-	0x5f: 1,
-	0x87: 1
-}
 
 def virus_level(virus):
 	if virus == 0 or virus >= 0x9f:
@@ -32,11 +24,6 @@ def virus_level(virus):
 		return 3
 	else:
 		return (virus + 1) % 4
-
-def init_virus_data():
-	global virus_data
-	virus_data = open('virus_data.txt', 'r').read().strip()
-	virus_data = map(lambda str: map(int, str.split(' ')), virus_data.split('\n'))
 
 def init_rom_data(rom_path):
 	global rom
@@ -180,35 +167,30 @@ def randomize_gmds():
 	print 'randomized gmds'
 
 def virus_replace(ind):
-	# Ignore navis for now
-	if ind == 0xf0:
-		return 0xf2
-	if ind >= 168:
+	# Ignore navis for now, except for invincible Bass1
+	old_enemy = enemies.lookup(ind)
+	if old_enemy.name == 'Bass1':
+		return enemies.where(name = 'BassGS')[0].ind
+	if old_enemy.is_navi:
 		return ind
+
 	# Also ignore coldhead, windbox, yort1 for now
-	if ind in [0x16, 0x29, 0x39]:
-		return ind
-	old_hp, old_attack = virus_data[ind]
-	if old_hp == -1:
+	if old_enemy.full_name in ['HardHead2', 'WindBox1', 'Yort1']:
 		return ind
 
 	candidates = []
-	for i in range(len(virus_data)):
-		virus_hp, virus_attack = virus_data[i]
-		if virus_hp == -1:
-			continue
-		# Special case the mettaur because of tutorial
-		if ind == 1 and virus_hp > 100:
-			continue
-		if virus_level(i) >= virus_level(ind) and i not in banned_viruses:
-			candidates.append(i)
-	return random.choice(candidates)
+	assert(old_enemy.is_navi is False)
+	candidates = enemies.where(is_navi = False, effective_level = lambda x : x >= old_enemy.effective_level)
+	candidates = filter(lambda enemy : enemy.name not in banned_viruses, candidates)
+	# Special case mettaur because we want tutorial to be possible
+	if old_enemy.full_name == 'Mettaur1':
+		candidates = filter(lambda enemy : enemy.hp <= 100, candidates)
+	return random.choice(candidates).ind
 
 def randomize_viruses():
 	battle_regex = re.compile('(?s)\x00[\x01-\x03][\x01-\x03]\x00(?:.[\x01-\x06][\x01-\x03].)+\xff\x00\x00\x00')
 
 	n_battles = 0
-	print 'randomizing the viruses'
 	for match in battle_regex.finditer(rom.rom_data):
 		# Sanity check
 		if match.start() >= 0x22000:
@@ -403,8 +385,9 @@ def main(rom_path, output_path):
 	random.seed()
 	init_rom_data(rom_path)
 
-	init_virus_data()
 	init_chip_data()
+	import bn3
+	bn3.load_enemies(rom)
 
 	randomize_viruses()
 	randomize_folders()

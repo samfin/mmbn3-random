@@ -1,168 +1,243 @@
--1 0
-40 10
-60 40
-120 80
-160 150
-60 10
-90 50
-130 100
-180 200
-90 30
-150 60
-240 90
-300 150
-90 30
-140 60
-220 100
-320 200
-40 20
-100 50
-160 80
-230 150
-80 60
-120 100
-200 100
-300 200
-170 50
-220 100
-270 150
-370 200
-100 30
-130 60
-160 90
-200 150
-90 30
-140 60
-190 90
-260 150
-40 15
-60 60
-160 90
-220 150
-100 0
-100 0
-300 0
-500 0
-120 50
-220 80
-280 120
-400 200
-50 50
-100 80
-160 120
-200 200
-100 50
-170 100
-220 150
-300 200
-120 20
-160 40
-210 60
-320 80
-130 50
-170 100
-210 150
-250 200
-120 0
-170 0
-220 0
-300 0
-300 200
-300 200
-300 200
-300 200
-200 300
-400 300
-90 20
-130 50
-170 80
-220 140
-150 40
-220 80
-250 120
-300 200
-100 30
-140 60
-180 90
-300 120
-140 50
-190 100
-240 150
-300 200
-60 40
-130 60
-180 120
-250 200
-150 50
-200 100
-250 150
-300 200
-100 30
-150 60
-200 90
-300 150
-80 30
-100 60
-130 90
-260 150
-120 60
-160 100
-200 120
-300 200
-90 30
-150 60
-220 90
-300 150
-90 30
-130 60
-170 90
-230 150
-90 30
-140 60
-200 100
-400 200
-90 0
-150 0
-200 0
-300 0
-100 50
-140 70
-180 90
-300 150
-80 15
-140 40
-240 80
-360 150
-120 50
-160 80
-300 200
-200 120
-80 20
-150 50
-200 80
-200 160
-130 40
-180 80
-230 120
-330 200
-100 50
-160 100
-250 150
-300 200
-100 40
-150 70
-200 100
-300 200
-70 30
-140 60
-180 90
-320 150
--1 0
--1 0
--1 0
--1 0
--1 0
--1 0
--1 0
--1 0
--1 0
+Mettaur 1 40 10
+Mettaur 2 60 40
+Mettaur 3 120 80
+Mettaur 4 160 150
+Canodumb 1 60 10
+Canodumb 2 90 50
+Canodumb 3 130 100
+Canodumb 4 180 200
+Fishy 1 90 30
+Fishy 2 150 60
+Fishy 3 300 150
+Fishy 4 300 150
+Swordy 1 90 30
+Swordy 2 140 60
+Swordy 3 220 100
+Swordy 4 320 200
+Ratty 1 40 20
+Ratty 2 100 50
+Ratty 3 160 80
+Ratty 4 230 150
+HardHead 1 80 60
+HardHead 2 120 100
+HardHead 3 200 100
+HardHead 4 300 200
+Jelly 1 170 50
+Jelly 2 220 100
+Jelly 3 270 150
+Jelly 4 370 200
+Shrimpy 1 100 30
+Shrimpy 2 130 60
+Shrimpy 3 160 90
+Shrimpy 4 200 150
+Spikey 1 90 30
+Spikey 2 140 60
+Spikey 3 190 90
+Spikey 4 260 150
+Bunny 1 40 15
+Bunny 2 60 60
+Bunny 3 160 90
+Bunny 4 220 150
+WindBox 1 100 0
+WindBox 2 100 0
+WindBox 3 300 0
+WindBox 4 500 0
+PuffBall 1 120 50
+PuffBall 2 220 80
+PuffBall 3 280 120
+PuffBall 4 400 200
+Mushy 1 50 50
+Mushy 2 100 80
+Mushy 3 160 120
+Mushy 4 200 200
+Dominerd 1 100 50
+Dominerd 2 170 100
+Dominerd 3 220 150
+Dominerd 4 300 200
+Yort 1 120 20
+Yort 2 160 40
+Yort 3 210 60
+Yort 4 320 80
+Shadow 1 130 50
+Shadow 2 170 100
+Shadow 3 210 150
+Shadow 4 250 200
+Brushman 1 120 0
+Brushman 2 170 0
+Brushman 3 220 0
+Brushman 4 300 0
+Scutz 4 300 200
+Scuttle 4 300 200
+Scuttler 4 300 200
+Scuttzer 4 300 200
+Scuttlest 4 200 300
+ScuttleOmega 4 400 300
+Beetle 1 90 20
+Beetle 2 130 50
+Beetle 3 170 80
+Beetle 4 220 140
+Metrid 1 150 40
+Metrid 2 200 80
+Metrid 3 250 120
+Metrid 4 300 200
+SnowBlow 1 100 30
+SnowBlow 2 140 60
+SnowBlow 3 180 90
+SnowBlow 4 300 120
+KillerEye 1 140 50
+KillerEye 2 190 100
+KillerEye 3 240 150
+KillerEye 4 300 200
+Momogra 1 60 40
+Momogra 2 130 60
+Momogra 3 180 120
+Momogra 4 250 200
+Basher 1 150 50
+Basher 2 200 100
+Basher 3 250 150
+Basher 4 300 200
+Heavy 1 100 30
+Heavy 2 150 60
+Heavy 3 200 90
+Heavy 4 300 150
+Pengi 1 80 30
+Pengi 2 100 60
+Pengi 3 130 90
+Pengi 4 260 150
+Viney 1 120 60
+Viney 2 160 100
+Viney 3 200 120
+Viney 4 300 200
+Slimer 1 90 30
+Slimer 2 150 60
+Slimer 3 220 90
+Slimer 4 300 150
+Elebee 1 90 30
+Elebee 2 130 60
+Elebee 3 170 90
+Elebee 4 230 150
+Needler 1 90 30
+Needler 2 140 60
+Needler 3 200 100
+Needler 4 400 200
+Trumpy 1 90 0
+Trumpy 2 150 0
+Trumpy 3 200 0
+Trumpy 4 300 0
+AlphaBug 1 100 50
+AlphaBug 2 140 70
+AlphaBug 3 180 90
+Alphabug 4 300 150
+Quaker 1 80 15
+Quaker 2 140 40
+Quaker 3 240 80
+Quaker 4 360 150
+NO 1 120 50
+NO 2 160 80
+NO 3 200 120
+NO 4 300 200
+Eleball 1 80 20
+Eleball 2 150 50
+Eleball 3 200 80
+Eleball 4 200 160
+Volcano 1 130 40
+Volcano 2 180 80
+Volcano 3 230 120
+Volcano 4 330 200
+Totem 1 100 50
+Totem 2 160 100
+Totem 3 250 150
+Totem 4 300 200
+Twins 1 100 40
+Twins 2 150 70
+Twins 3 200 100
+Twins 4 300 200
+Boomer 1 70 30
+Boomer 2 140 60
+Boomer 3 180 90
+Boomer 4 320 150
+Number1 1 250 0
+Number1 2 250 0
+Number1 3 250 0
+Number2 1 400 0
+Number2 2 400 0
+Number2 3 400 0
+Number3 1 650 0
+Number3 2 650 0
+Number3 3 650 0
+FlashMan 1
+FlashMan 2
+FlashMan 3
+FlashMan 4
+BeastMan 1
+BeastMan 2
+BeastMan 3
+BeastMan 4
+BubbleMan 1
+BubbleMan 2
+BubbleMan 3
+BubbleMan 4
+DesertMan 1
+DesertMan 2
+DesertMan 3
+DesertMan 4
+PlantMan 1
+PlantMan 2
+PlantMan 3
+PlantMan 4
+FlameMan 1
+FlameMan 2
+FlameMan 3
+FlameMan 4
+DrillMan 1
+DrillMan 2
+DrillMan 3
+DrillMan 4
+Alpha 0
+AlphaOmega 0
+Null -1
+Null -1
+GutsMan 1
+GutsMan 2
+GutsMan 3
+GutsMan 4
+ProtoMan 1
+ProtoMan 2
+ProtoMan 3
+ProtoMan 4
+MetalMan 1
+MetalMan 2
+MetalMan 3
+MetalMan 4
+Punk 1
+Punk 2
+Punk 3
+Punk 4
+KingMan 1
+KingMan 2
+KingMan 3
+KingMan 4
+MistMan 1
+MistMan 2
+MistMan 3
+MistMan 4
+BowlMan 1
+BowlMan 2
+BowlMan 3
+BowlMan 4
+DarkMan 1
+DarkMan 2
+DarkMan 3
+DarkMan 4
+JapanMan 1
+JapanMan 2
+JapanMan 3
+JapanMan 4
+Serenade 1
+Serenade 2
+Serenade 3
+Serenade 4
+Bass1 0
+Bass 0
+BassGS 0
+BassOmega 0
