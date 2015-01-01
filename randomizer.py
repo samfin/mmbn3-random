@@ -8,75 +8,14 @@ from pprint import pprint
 
 from rom import Rom
 import enemies
+import chips
 
-N_CHIPS = 312
 banned_viruses = ['Shadow', 'Twins', 'Mushy', 'Number1', 'Number2', 'Number3']
-banned_chips = [0x110]
-
-def virus_level(virus):
-	if virus == 0 or virus >= 0x9f:
-		return -1
-	if virus in special_virus_level:
-		return special_virus_level[virus]
-	if virus < 0x45:
-		return (virus + 3) % 4
-	elif virus < 0x4a:
-		return 3
-	else:
-		return (virus + 1) % 4
+banned_chips = ['Punk']
 
 def init_rom_data(rom_path):
 	global rom
 	rom = Rom(rom_path)
-
-def init_chip_data():
-	rom.seek(0x11530)
-	global chip_data
-	chip_data = []
-
-	# Load in chip ranks from file
-	chip_ranks = open('chip_data.txt', 'r').read().strip()
-	chip_ranks = map(int, chip_ranks.split('\n'))
-
-	chip_names = open('chip_names.txt', 'r').read().strip()
-	chip_names = chip_names.split('\n')
-
-	chip_data.append({})
-	for i in range(N_CHIPS):
-		code1, code2, code3, code4, code5, code6, filler, regsize, chip_type, power, num, more_filler = struct.unpack('<BBBBBBIBBHH16s', rom.read(32))
-		# chip_type seems to be a bitfield, only look at lsb for now
-		is_attack = (chip_type & 1)
-		codes = filter(lambda x : x != 255, [code1, code2, code3, code4, code5, code6])
-
-		if num <= 200:
-			rank = chip_ranks[num - 1]
-		else:
-			rank = chip_ranks[i]
-
-		if num >= 1 and num <= 200:
-			name = chip_names[num - 1]
-		else:
-			name = chip_names[i]
-
-		if name == 'VarSwrd':
-			power = 60
-			rom.write_byte(power, rom.r_offset - 32 + 12)
-
-		# Conditional attacks
-		is_conditional = name in ['Spice1', 'Spice2', 'Spice3', 'BlkBomb1', 'BlkBomb2', 'BlkBomb3', 'GrabBack', 'GrabRvng', 'Snake', 'Team1', 'Slasher', 'NoBeam1', 'NoBeam2', 'NoBeam3']
-
-		chip = {
-			'name' : name,
-			'codes' : codes,
-			'is_attack' : bool(is_attack),
-			'is_conditional' : is_conditional,
-			'regsize' : regsize,
-			'power' : power,
-			'num' : num,
-			'rank' : rank,
-		}
-
-		chip_data.append(chip)
 
 def randomize_gmds():
 	# does not work in blue!
@@ -206,28 +145,27 @@ def randomize_viruses():
 	print 'randomized %d battles' % n_battles
 
 def generate_chip_permutation(allow_conditional_attacks = False, uber_random = True):
-	all_chips = defaultdict(list)
-	for chip_ind in range(1, N_CHIPS + 1):
-		chip = chip_data[chip_ind]
-		chip_id = chip['rank']
+	chips_by_level = defaultdict(list)
+	# Divide chips into equivalence classes
+	for chip in chips.where():
+		chip_id = chip.level
 		if uber_random:
 			if chip_id >= 10:
 				chip_id = 10
 			elif chip_id >= 0:
 				chip_id = 0
 		# Treat standard attacking chips differently from standard nonattacking chips
-		if chip['is_attack'] and (allow_conditional_attacks or not chip['is_conditional']) and chip_id < 10:
+		if chip.is_attack and (allow_conditional_attacks or not chip.is_conditional) and chip_id < 10:
 			chip_id += 1000
-		all_chips[chip_id].append(chip_ind)
-	# Do the shuffling
+		chips_by_level[chip_id].append(chip.ind)
+	# Shuffle inside each class and aggregate
 	chip_map = {}
-	for key, chips in all_chips.iteritems():
-		keys = copy.copy(chips)
-		random.shuffle(chips)
-		for old_chip, new_chip in zip(keys, chips):
+	for key, vals in chips_by_level.iteritems():
+		keys = copy.copy(vals)
+		random.shuffle(vals)
+		for old_chip, new_chip in zip(keys, vals):
 			chip_map[old_chip] = new_chip
-	# print chip_map[1]
-	# raw_input()
+
 	return chip_map
 
 def get_new_code(old_chip, old_code, new_chip):
@@ -385,9 +323,9 @@ def main(rom_path, output_path):
 	random.seed()
 	init_rom_data(rom_path)
 
-	init_chip_data()
 	import bn3
 	bn3.load_enemies(rom)
+	bn3.load_chips(rom)
 
 	randomize_viruses()
 	randomize_folders()

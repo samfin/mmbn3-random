@@ -1,5 +1,4 @@
-all_enemies = []
-banned_enemies = []
+all_enemies = {}
 
 class Enemy(object):
 	def __init__(self, name, level):
@@ -27,15 +26,16 @@ class Enemy(object):
 	def __repr__(self):
 		return self.full_name
 
-def add_enemy(name, level):
+def add_enemy(ind, name, level):
 	x = Enemy(name, level)
-	x.ind = len(all_enemies)
-	all_enemies.append(x)
+	assert(ind not in all_enemies)
+	x.ind = ind
+	all_enemies[ind] = x
 	return x
 
 def lookup(ind):
 	return all_enemies[ind]
 
 # like sql
-def where(candidates = all_enemies, **kwargs):
-	return filter(lambda enemy : all([key in enemy.__dict__ and (val(enemy.__dict__[key]) if callable(val) else enemy.__dict__[key] == val) for key, val in kwargs.iteritems()]), candidates)
+def where(**kwargs):
+	return filter(lambda enemy : all([key in enemy.__dict__ and (val(enemy.__dict__[key]) if callable(val) else enemy.__dict__[key] == val) for key, val in kwargs.iteritems()]), all_enemies.values())

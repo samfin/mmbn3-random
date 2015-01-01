@@ -1,312 +1,312 @@
-1
-2
-3
-1
-2
-3
-1
-2
-3
-3
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-1
-1
-2
-2
-2
-2
-2
-3
-2
-2
-3
-2
-1
-2
-3
-3
-1
-2
-3
-1
-2
-3
-2
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-3
-1
-2
-3
-1
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-1
-2
-3
-1
-2
-3
-1
-2
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-1
-2
-3
-3
-2
-1
-1
-2
-2
-3
-2
-1
-1
-1
-2
-1
-1
-2
-3
-1
-3
-1
-2
-1
-2
-3
-1
-1
-1
-2
-2
-2
-3
-3
-2
-2
-3
-3
-1
-2
-3
-2
-2
-3
-1
-2
-3
-2
-1
-2
-3
-3
-2
-0
-0
-0
-0
-0
-0
-0
-0
-0
-3
-1
-2
-2
-2
-2
-2
-3
-3
-2
-3
-3
-1
-3
-3
-3
-3
-2
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-11
-10
-11
-12
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
--1
-11
-11
-11
-11
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-10
-11
-12
-12
-20
-21
-21
-21
-21
-21
-21
-21
-21
-21
-21
-21
+Cannon 1
+HiCannon 2
+M-Cannon 3
+AirShot1 1
+AirShot2 2
+AirShot3 3
+LavaCan1 1
+LavaCan2 2
+LavaCan3 3
+ShotGun 1
+V-Gun 1
+SideGun 1
+Spreader 1
+Bubbler 1
+Bub-V 1
+BublSide 1
+HeatShot 1
+Heat-V 1
+HeatSide 1
+MiniBomb 1
+SnglBomb 1
+DublBomb 2
+TrplBomb 3
+CannBall 1
+IceBall 2
+LavaBall 3
+BlkBomb1 1
+BlkBomb2 2
+BlkBomb3 3
+Sword 1
+WideSwrd 1
+LongSwrd 1
+FireSwrd 2
+AquaSwrd 2
+ElecSwrd 2
+BambSwrd 2
+CustSwrd 2
+VarSwrd 3
+StepSwrd 2
+StepCros 3
+Panic 3
+AirSwrd 2
+Slasher 2
+ShockWav 1
+SonicWav 2
+DynaWave 3
+GutPunch 1
+GutStrgt 2
+GutImpct 3
+AirStrm1 1
+AirStrm2 2
+AirStrm3 3
+DashAtk 1
+Burner 2
+Totem1 1
+Totem2 2
+Totem3 3
+Ratton1 1
+Ratton2 2
+Ratton3 3
+Wave 1
+RedWave 2
+MudWave 3
+Hammer 1
+Tornado 1
+ZapRing1 1
+ZapRing2 2
+ZapRing3 3
+Yo-Yo1 1
+Yo-Yo2 2
+Yo-Yo3 3
+Spice1 1
+Spice2 2
+Spice3 3
+Lance 2
+Scuttlst 0
+Momogra 0
+Rope1 1
+Rope2 2
+Rope3 3
+Magnum1 1
+Magnum2 2
+Magnum3 3
+Boomer1 1
+Boomer2 2
+Boomer3 3
+RndmMetr 1
+HoleMetr 2
+ShotMetr 3
+IceWave1 1
+IceWave2 2
+IceWave3 3
+Plasma1 1
+Plasma2 2
+Plasma3 3
+Arrow1 1
+Arrow2 2
+Arrow3 3
+TimeBomb 2
+Mine 3
+Sensor1 1
+Sensor2 2
+Sensor3 3
+CrsShld1 1
+CrsShld2 2
+CrsShld3 3
+Geyser 2
+PoisMask 1
+PoisFace 2
+Shake1 1
+Shake2 2
+Shake3 3
+BigWave 3
+Volcano 3
+Condor 3
+Burning 2
+FireRatn 3
+Guard 1
+PanlOut1 1
+PanlOut3 2
+Recov10 1
+Recov30 1
+Recov50 1
+Recov80 2
+Recov120 2
+Recov150 2
+Recov200 3
+Recov300 3
+PanlGrab 1
+AreaGrab 1
+Snake 1
+Team1 1
+MetaGel1 1
+MetaGel2 2
+MetaGel3 3
+GrabBack 2
+GrabRvng 3
+Geddon1 1
+Geddon2 2
+Geddon3 3
+RockCube 1
+Prism 3
+Wind 1
+Fan 2
+RockArm1 1
+RockArm2 2
+RockArm3 3
+NoBeam1 1
+NoBeam2 2
+NoBeam3 3
+Pawn 3
+Knight 2
+Rook 1
+Needler1 1
+Needler2 2
+Needler3 3
+SloGauge 2
+FstGauge 3
+Repair 2
+Invis 2
+Hole 3
+Mole1 1
+Mole2 2
+Mole3 3
+Shadow 3
+Mettaur 0
+Bunny 0
+AirShoes 2
+Team2 2
+Fanfare 1
+Discord 2
+Timpani 3
+Barrier 1
+Barr100 2
+Barr200 3
+Aura 3
+NrthWind 2
+HolyPanl 1
+LavaStge 2
+IceStage 2
+GrassStg 2
+SandStge 2
+MetlStge 2
+Snctuary 3
+Swordy 0
+Spikey 0
+Mushy 0
+Jelly 0
+KillrEye 0
+AntiNavi 3
+AntiDmg 3
+AntiSwrd 2
+AntiRecv 3
+CopyDmg 2
+Atk+10 1
+Fire+30 3
+Aqua+30 3
+Elec+30 3
+Wood+30 3
+Navi+20 2
+LifeAura 11
+Muramasa 11
+Guardian 11
+Anubis 11
+Atk+30 11
+Navi+40 11
+HeroSwrd 11
+ZeusHamr 11
+GodStone 11
+OldWood 11
+FullCust 11
+Meteors 11
+Poltrgst 11
+Jealousy 11
+StandOut 11
+WatrLine 11
+Ligtning 11
+GaiaSwrd 11
+Roll 10
+RollV2 11
+RollV3 12
+Gutsman 10
+GutsmanV2 11
+GutsmanV3 12
+GustmanV4 12
+GutsManV5 20
+Protoman 10
+ProtomnV2 11
+ProtomnV3 12
+ProtomnV4 12
+ProtoMnV5 20
+Flashman 10
+FlashmnV2 11
+FlashmnV3 12
+FlashmnV4 12
+FlashMnV5 20
+Beastman 10
+BeastmnV2 11
+BeastmnV3 12
+BeastmnV4 12
+BeastMnV5 20
+BubblMan 10
+BubblMnV2 11
+BubblMnV3 12
+BubblMnV4 12
+BubblMnV5 20
+DesrtMan 10
+DesrtMnV2 11
+DesrtMnV3 12
+DesrtMnV4 12
+DesrtMnV5 20
+PlantMan 10
+PlantMnV2 11
+PlantMnV3 12
+PlantMnV4 12
+PlantMnV5 20
+FlamMan 10
+FlamManV2 11
+FlamManV3 12
+FlamManV4 12
+FlamManV5 20
+DrillMan 10
+DrillMnV2 11
+DrillMnV3 12
+DrillMnV4 12
+DrillMnV5 20
+MetalMan 10
+MetalMnV2 11
+MetalMnV3 12
+MetalMnV4 12
+MetalMnV5 20
+Punk -1
+Salamndr 11
+Fountain 11
+Bolt 11
+GaiaBlad 11
+KingMan 10
+KingManV2 11
+KingManV3 12
+KingManV4 12
+KingMnV5 20
+MistMan 10
+MistManV2 11
+MistManV3 12
+MistManV4 12
+MistMnV5 20
+BowlMan 10
+BowlManV2 11
+BowlManV3 12
+BowlManV4 12
+BowlManV5 20
+DarkMan 10
+DarkManV2 11
+DarkManV3 12
+DarkManV4 12
+DarkManV5 20
+JapanMan 10
+JapanMnV2 11
+JapanMnV3 12
+JapanMnV4 12
+JapanMnV5 20
+DeltaRay 21
+FolderBak 21
+NavRcycl 21
+AlphArmSg 21
+Bass 21
+Serenade 21
+Balance 21
+DarkAura 21
+AlphArmOm 21
+Bass+ 21
+BassGS 21
