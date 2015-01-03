@@ -18,100 +18,32 @@ def init_rom_data(rom_path):
 	rom = Rom(rom_path)
 
 def randomize_gmds():
-	# does not work in blue!
-	base_offset = 0x28810
-	free_space_offset = 0x67c000
-	map_data = {
-		0x10: [0, 1, 2],
-		0x11: [0, 1],
-		0x12: [0, 1],
-		0x13: [0, 1, 3],
-		0x14: [0, 1, 2, 3, 4, 5, 6],
-		0x15: [0, 1, 2]
-	}
-	new_scripts = {}
-	area = 0x10
-	subarea = 0x0
-	chip_regex = re.compile('(?s)\xf1\x00\xfb\x04\x0f(.{32})')
-	zenny_regex = re.compile('(?s)\xf1\x00\xfb\x00\x0f(.{64})')
-	earliest_script = 999999999
-	end_addr = -1
-	for area, subareas in map_data.iteritems():
-		for subarea in subareas:
-			script_ptr = rom.read_word(base_offset + 4 * area) - 0x08000000 + 4 * subarea
-			earliest_script = min(earliest_script, script_ptr)
-			script_addr = rom.read_word(script_ptr) - 0x08000000
-			script_data = rom.read_lz77(script_addr)
-			end_addr = max(end_addr, rom.lz77_end)
-			new_data = map(ord, script_data)
+	for gmd_table in rom.gmd_tables:
+		# Replace chip tables
+		for chip_table in gmd_table.chip_tables:
+			for i in range(len(chip_table)):
+				old_chip, old_code = chip_table[i]
+				chip_map = generate_chip_permutation()
+				new_chip = chip_map[old_chip]
+				new_code = random.choice(chips.lookup(new_chip).codes)
+				chip_table[i] = (new_chip, new_code)
 
-			# Replace chip tables
-			for match in chip_regex.finditer(script_data):
-				match_offset = match.start() + 5
-				x = map(lambda x : ord(x), list(match.groups()[0]))
-				for i in range(0, len(x), 2):
-					chip_map = generate_chip_permutation()
-					old_chip = x[i]
-					new_chip = chip_map[old_chip]
-					new_code = random.choice(chip_data[new_chip]['codes'])
-					new_data[match_offset + i] = new_chip
-					new_data[match_offset + i+1] = new_code
+		# Multiply zenny tables
+		for zenny_table in gmd_table.zenny_tables:
+			for i in range(len(zenny_table)):
+				zenny_table[i] = (zenny_table[i] * 3) / 2
 
-			# Multiply zenny tables
-			for match in zenny_regex.finditer(script_data):
-				match_offset = match.start() + 5
-				zennys = list(struct.unpack('<IIIIIIIIIIIIIIII', match.groups()[0]))
-				for i in range(16):
-					zennys[i] = (zennys[i] * 3) / 2
-				zenny_str = struct.pack('<IIIIIIIIIIIIIIII', *zennys)
-				for i in range(len(zenny_str)):
-					new_data[match_offset + i] = ord(zenny_str[i])
-
-			new_script = ''.join(map(chr, new_data))
-			new_scripts[script_ptr] = rom.lz77_compress(new_script)
-
-	# Get the missing scripts that were not edited
-	rom.seek(earliest_script)
-	while True:
-		offset = rom.r_offset
-		script_addr = rom.read_word()
-		if script_addr == 0:
-			break
-		if offset not in new_scripts:
-			script_addr -= 0x08000000
-			script_data = rom.lz77_compress(rom.read_lz77(script_addr))
-			new_scripts[offset] = script_data
-
-	script_offset = rom.read_word(earliest_script) - 0x08000000
-	# Write all the scripts back
-	n_full_writes = 0
-	for script_ptr, script_data in new_scripts.iteritems():
-		# Check if there is space for this script in the script memory region
-		if script_offset + len(script_data) < end_addr:
-			rom.write(script_data, script_offset)
-			rom.write_word(script_offset + 0x08000000, script_ptr)
-			script_offset += len(script_data)
-			# Pad up to multiple of 4
-			script_offset += (4 - script_offset) % 4
-		else:
-			# No space here, write it somewhere else
-			n_full_writes += 1
-			rom.write(script_data, free_space_offset)
-			rom.write_word(free_space_offset + 0x08000000, script_ptr)
-			free_space_offset += len(script_data)
-			# Pad up to multiple of 4
-			free_space_offset += (4 - free_space_offset) % 4
-	# Quick sanity check
-	assert(n_full_writes <= 1)
 	print 'randomized gmds'
 
 def virus_replace(ind):
 	# Ignore navis for now, except for invincible Bass1
 	old_enemy = enemies.lookup(ind)
 	if old_enemy.name == 'Bass1':
-		return enemies.where(name = 'BassGS')[0].ind
+		return enemies.find(name = 'BassGS').ind
 	if old_enemy.is_navi:
-		return ind
+		if old_enemy.level <= 0:
+			return ind
+		return enemies.find(name = old_enemy.name, level = 4).ind
 
 	# Also ignore coldhead, windbox, yort1 for now
 	if old_enemy.full_name in ['HardHead2', 'WindBox1', 'Yort1']:
@@ -125,6 +57,10 @@ def virus_replace(ind):
 	if old_enemy.full_name == 'Mettaur1':
 		candidates = filter(lambda enemy : enemy.hp <= 100, candidates)
 	return random.choice(candidates).ind
+
+def chip_replace(ind):
+	old_chip = chips.lookup(ind)
+
 
 def randomize_viruses():
 	battle_regex = re.compile('(?s)\x00[\x01-\x03][\x01-\x03]\x00(?:.[\x01-\x06][\x01-\x03].)+\xff\x00\x00\x00')
@@ -169,11 +105,13 @@ def generate_chip_permutation(allow_conditional_attacks = False, uber_random = T
 	return chip_map
 
 def get_new_code(old_chip, old_code, new_chip):
-	if old_code == 26 and old_code in chip_data[new_chip]['codes']:
+	old_chip = chips.lookup(old_chip)
+	new_chip = chips.lookup(new_chip)
+	if old_code == 26 and old_code in new_chip.codes:
 		return old_code
 	try:
-		old_code_ind = chip_data[old_chip]['codes'].index(old_code)
-		new_codes = chip_data[new_chip]['codes']
+		old_code_ind = old_chip.codes.index(old_code)
+		new_codes = new_chip.codes
 		new_code_ind = old_code_ind % len(new_codes)
 		return new_codes[new_code_ind]
 	except ValueError:
@@ -288,7 +226,7 @@ def randomize_shops():
 			if item_type == 2:
 				chip_map = generate_chip_permutation()
 				new_chip = chip_map[old_chip]
-				new_code = random.choice(chip_data[new_chip]['codes'])
+				new_code = random.choice(chips.lookup(new_chip).codes)
 				new_item = struct.pack('<BBHBBH', item_type, stock, new_chip, new_code, filler, price)
 				rom.write(new_item, item_offset)
 			item_offset += 8
@@ -324,8 +262,8 @@ def main(rom_path, output_path):
 	init_rom_data(rom_path)
 
 	import bn3
-	bn3.load_enemies(rom)
-	bn3.load_chips(rom)
+	bn3.load_all(rom)
+	bn3.balance_chips()
 
 	randomize_viruses()
 	randomize_folders()
@@ -333,8 +271,9 @@ def main(rom_path, output_path):
 	randomize_gmds()
 	randomize_shops()
 	randomize_number_trader()
-	rape_mode()
+	# rape_mode()
 
+	bn3.write_all(rom)
 	open(output_path, 'wb').write(''.join(rom.buffer))
 
 

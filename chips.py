@@ -29,3 +29,8 @@ def lookup(ind):
 
 def where(**kwargs):
 	return filter(lambda enemy : all([key in enemy.__dict__ and (val(enemy.__dict__[key]) if callable(val) else enemy.__dict__[key] == val) for key, val in kwargs.iteritems()]), all_chips.values())
+
+def find(**kwargs):
+	results = where(**kwargs)
+	assert(len(results) == 1)
+	return results[0]

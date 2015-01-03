@@ -14,7 +14,7 @@ class Enemy(object):
 	def get_effective_level(self):
 		level = self.level
 		if self.name in ['Mettaur', 'Canodumb', 'Bunny']:
-			level = max(level - 1, 0)
+			level = max(level - 1, 1)
 		return level
 
 	def get_full_name(self):
@@ -39,3 +39,8 @@ def lookup(ind):
 # like sql
 def where(**kwargs):
 	return filter(lambda enemy : all([key in enemy.__dict__ and (val(enemy.__dict__[key]) if callable(val) else enemy.__dict__[key] == val) for key, val in kwargs.iteritems()]), all_enemies.values())
+
+def find(**kwargs):
+	results = where(**kwargs)
+	assert(len(results) == 1)
+	return results[0]
