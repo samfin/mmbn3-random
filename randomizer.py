@@ -170,7 +170,11 @@ def randomize_folders():
 			rom.write(chipstr)
 	print 'randomized %d folders' % n_folders
 
-
+def chip_replace(old_chip, old_code):
+	chip_map = generate_chip_permutation(allow_conditional_attacks = True)
+	new_chip = chip_map[old_chip]
+	new_code = random.choice(chips.lookup(new_chip).codes)
+	return (new_chip, new_code)
 
 def randomize_virus_drops():
 	rom.seek(0x160a8)
@@ -182,20 +186,13 @@ def randomize_virus_drops():
 		for i in range(28):
 			if i % 14 == 0:
 				last_chip = None
-				try:
-					enemy = enemies.lookup(virus_ind)
-					if enemy.level == 4 and not enemy.is_navi and 'Omega' in enemy.name:
-						chip = random.choice(chips.where(level = util.leq(19)))
-						last_chip = (chip.ind, random.choice(chip.codes))
-				except Exception:
-					# whoops
-					pass
 			offset = rom.r_offset
 			reward = rom.read_halfword()
 			# 0 = chip, 1 = zenny, 2 = health, 3 = should not happen (terminator)
 			reward_type = reward >> 14;
 			# Number from 0-6
 			buster_rank = (i % 14) / 2
+			new_reward = reward
 			if reward_type == 0:
 				# Read the chip data
 				old_code = (reward >> 9) & 0x1f;
@@ -211,15 +208,6 @@ def randomize_virus_drops():
 					new_chip = chip_map[old_chip]
 					new_code = random.choice(chips.lookup(new_chip).codes)
 				new_reward = new_chip + (new_code << 9)
-				rom.write_halfword(new_reward)
-
-				# Discharge the queue
-				for old_offset in zenny_queue:
-					chip_map = generate_chip_permutation(allow_conditional_attacks = True)
-					new_chip = chip_map[old_chip]
-					new_code = random.choice(chips.lookup(new_chip).codes)
-					rom.write_halfword(new_chip + (new_code << 9), old_offset)
-				zenny_queue = []
 
 			elif reward_type == 1:
 				# Only turn lvl 5+ drops to chips
@@ -229,11 +217,32 @@ def randomize_virus_drops():
 						zenny_queue.append(offset)
 					else:
 						old_chip, old_code = last_chip
-						chip_map = generate_chip_permutation(allow_conditional_attacks = True)
-						new_chip = chip_map[old_chip]
-						new_code = random.choice(chips.lookup(new_chip).codes)
+						new_chip, new_code = chip_replace(old_chip, old_code)
 						new_reward = new_chip + (new_code << 9)
-						rom.write_halfword(new_reward)
+
+			rom.write_halfword(new_reward)
+
+			if i % 14 == 13 and last_chip is None:
+				try:
+					enemy = enemies.lookup(virus_ind)
+					if not enemy.is_navi:
+						if enemy.level == 4:
+							chip = random.choice(chips.where(level = util.leq(19)))
+						else:
+							chip = random.choice(chips.where(level = util.leq(9)))
+						last_chip = (chip.ind, random.choice(chip.codes))
+				except Exception:
+					# whoops
+					pass
+
+			if zenny_queue and last_chip is not None:
+				old_chip, old_code = last_chip
+				# Discharge the queue
+				for old_offset in zenny_queue:
+					new_chip, new_code = chip_replace(old_chip, old_code)
+					rom.write_halfword(new_chip + (new_code << 9), old_offset)
+				zenny_queue = []
+
 	print 'randomized virus drops'
 
 def randomize_shops():
