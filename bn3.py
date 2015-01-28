@@ -25,7 +25,7 @@ def load_enemies(rom):
 			x.attack = int(enemy[3])
 		x.is_navi = (x.ind >= 0xa8)
 
-conditional_chips =  ['Spice1', 'Spice2', 'Spice3', 'BlkBomb1', 'BlkBomb2', 'BlkBomb3', 'GrabBack', 'GrabRvng', 'Snake', 'Team1', 'Slasher', 'NoBeam1', 'NoBeam2', 'NoBeam3']
+conditional_chips =  ['Spice1', 'Spice2', 'Spice3', 'GrabBack', 'GrabRvng', 'Snake', 'Team1', 'Slasher', 'NoBeam1', 'NoBeam2', 'NoBeam3']
 def load_chips(rom):
 	chip_data = open('chip_data.txt', 'r').read().strip()
 	chip_data = map(lambda s: s.split(' '), chip_data.split('\n'))

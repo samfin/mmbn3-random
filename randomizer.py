@@ -9,41 +9,31 @@ from pprint import pprint
 from rom import Rom
 import enemies
 import chips
+import util
 
 banned_viruses = ['Shadow', 'Twins', 'Mushy', 'Number1', 'Number2', 'Number3']
-banned_chips = ['Punk']
+banned_chips = ['Mettaur', 'Bunny', 'Spikey', 'Swordy', 'Jelly', 'Mushy', 'Momogra', 'KillrEye', 'Scuttlst', 'Punk']
 
 def init_rom_data(rom_path):
 	global rom
 	rom = Rom(rom_path)
-
-def randomize_gmds():
-	for gmd_table in rom.gmd_tables:
-		# Replace chip tables
-		for chip_table in gmd_table.chip_tables:
-			for i in range(len(chip_table)):
-				old_chip, old_code = chip_table[i]
-				chip_map = generate_chip_permutation()
-				new_chip = chip_map[old_chip]
-				new_code = random.choice(chips.lookup(new_chip).codes)
-				chip_table[i] = (new_chip, new_code)
-
-		# Multiply zenny tables
-		for zenny_table in gmd_table.zenny_tables:
-			for i in range(len(zenny_table)):
-				zenny_table[i] = (zenny_table[i] * 3) / 2
-
-	print 'randomized gmds'
 
 def virus_replace(ind):
 	# Ignore navis for now, except for invincible Bass1
 	old_enemy = enemies.lookup(ind)
 	if old_enemy.name == 'Bass1':
 		return enemies.find(name = 'BassGS').ind
+	if old_enemy.name == 'Alpha':
+		return enemies.find(name = 'AlphaOmega').ind
 	if old_enemy.is_navi:
 		if old_enemy.level <= 0:
 			return ind
-		return enemies.find(name = old_enemy.name, level = 4).ind
+		# Make the folder lock battles easier
+		if old_enemy.name in ['GutsMan', 'MetalMan']:
+			return enemies.find(name = old_enemy.name, level = min(4, old_enemy.level + 1)).ind
+		else:
+			return enemies.find(name = old_enemy.name, level = min(4, old_enemy.level + 2)).ind
+		# return ind
 
 	# Also ignore coldhead, windbox, yort1 for now
 	if old_enemy.full_name in ['HardHead2', 'WindBox1', 'Yort1']:
@@ -57,10 +47,6 @@ def virus_replace(ind):
 	if old_enemy.full_name == 'Mettaur1':
 		candidates = filter(lambda enemy : enemy.hp <= 100, candidates)
 	return random.choice(candidates).ind
-
-def chip_replace(ind):
-	old_chip = chips.lookup(ind)
-
 
 def randomize_viruses():
 	battle_regex = re.compile('(?s)\x00[\x01-\x03][\x01-\x03]\x00(?:.[\x01-\x06][\x01-\x03].)+\xff\x00\x00\x00')
@@ -80,7 +66,8 @@ def randomize_viruses():
 		rom.write(battle_data)
 	print 'randomized %d battles' % n_battles
 
-def generate_chip_permutation(allow_conditional_attacks = False, uber_random = True):
+def generate_chip_permutation(allow_conditional_attacks = False, uber_random = True, recov_only = False):
+	all_recov_chips = map(lambda chip : chip.ind, chips.where(name = lambda t : 'Recov' in t))
 	chips_by_level = defaultdict(list)
 	# Divide chips into equivalence classes
 	for chip in chips.where():
@@ -93,29 +80,45 @@ def generate_chip_permutation(allow_conditional_attacks = False, uber_random = T
 		# Treat standard attacking chips differently from standard nonattacking chips
 		if chip.is_attack and (allow_conditional_attacks or not chip.is_conditional) and chip_id < 10:
 			chip_id += 1000
+		# Also treat banned chips specially
+		if chip.name in banned_chips:
+			chip_id = chip.name
 		chips_by_level[chip_id].append(chip.ind)
 	# Shuffle inside each class and aggregate
 	chip_map = {}
 	for key, vals in chips_by_level.iteritems():
 		keys = copy.copy(vals)
+
 		random.shuffle(vals)
 		for old_chip, new_chip in zip(keys, vals):
 			chip_map[old_chip] = new_chip
 
+		if recov_only:
+			# Remove all non-recov chips
+			t = list(set(vals).intersection(all_recov_chips))
+			if t:
+				for old_chip in keys:
+					chip_map[old_chip] = random.choice(t)
+
 	return chip_map
 
-def get_new_code(old_chip, old_code, new_chip):
-	old_chip = chips.lookup(old_chip)
-	new_chip = chips.lookup(new_chip)
-	if old_code == 26 and old_code in new_chip.codes:
-		return old_code
-	try:
-		old_code_ind = old_chip.codes.index(old_code)
-		new_codes = new_chip.codes
-		new_code_ind = old_code_ind % len(new_codes)
-		return new_codes[new_code_ind]
-	except ValueError:
-		return old_code
+def randomize_gmds():
+	for gmd_table in rom.gmd_tables:
+		# Replace chip tables
+		for chip_table in gmd_table.chip_tables:
+			for i in range(len(chip_table)):
+				old_chip, old_code = chip_table[i]
+				chip_map = generate_chip_permutation()
+				new_chip = chip_map[old_chip]
+				new_code = random.choice(chips.lookup(new_chip).codes)
+				chip_table[i] = (new_chip, new_code)
+
+		# Multiply zenny tables
+		for zenny_table in gmd_table.zenny_tables:
+			for i in range(len(zenny_table)):
+				zenny_table[i] = (zenny_table[i] * 3) / 2
+
+	print 'randomized gmds'
 
 def randomize_folders():
 	rom.seek(0xcbdc)
@@ -123,14 +126,21 @@ def randomize_folders():
 
 	# Keep track of chip permutations so we can reuse them for tutorial
 	permutations = []
+
 	# There are 14 folders, the last 3 are tutorial only
 	for folder_ind in range(14):
 		is_tutorial = (folder_ind >= 11)
+		is_locked = (not is_tutorial and folder_ind >= 2)
 		if is_tutorial:
 			chip_map = permutations[0]
+		elif is_locked:
+			chip_map = generate_chip_permutation(recov_only = True)
 		else:
 			chip_map = generate_chip_permutation()
 		permutations.append(chip_map)
+		# Try to maintain old codes if same chip
+		chip_code_map = {}
+		chip_code_freq = defaultdict(int)
 		for i in range(30):
 			old_chip, old_code = struct.unpack('<HH', rom.read(4))
 			new_chip = chip_map[old_chip]
@@ -139,11 +149,28 @@ def randomize_folders():
 				# tutorial folder, dont change the code
 				new_code = old_code
 			else:
-				new_code = get_new_code(old_chip, old_code, new_chip)
+				key = (old_chip, old_code)
+				if key not in chip_code_map:
+					# Haven't seen this chip yet, give it a random code
+					if is_locked:
+						codes = chips.lookup(new_chip).codes
+						if 26 in codes:
+							chip_code_map[key] = 26
+						else:
+							r = {x: chip_code_freq[x] for x in codes}
+							s = max(r.values())
+							candidates = filter(lambda code : r[code] == s, codes)
+							chip_code_map[key] = random.choice(candidates)
+					else:
+						chip_code_map[key] = random.choice(chips.lookup(new_chip).codes)
+				new_code = chip_code_map[key]
+				chip_code_freq[new_code] += 1
 
 			chipstr = struct.pack('<HH', new_chip, new_code)
 			rom.write(chipstr)
 	print 'randomized %d folders' % n_folders
+
+
 
 def randomize_virus_drops():
 	rom.seek(0x160a8)
@@ -155,6 +182,14 @@ def randomize_virus_drops():
 		for i in range(28):
 			if i % 14 == 0:
 				last_chip = None
+				try:
+					enemy = enemies.lookup(virus_ind)
+					if enemy.level == 4 and not enemy.is_navi and 'Omega' in enemy.name:
+						chip = random.choice(chips.where(level = util.leq(19)))
+						last_chip = (chip.ind, random.choice(chip.codes))
+				except Exception:
+					# whoops
+					pass
 			offset = rom.r_offset
 			reward = rom.read_halfword()
 			# 0 = chip, 1 = zenny, 2 = health, 3 = should not happen (terminator)
@@ -174,7 +209,7 @@ def randomize_virus_drops():
 				else:
 					chip_map = generate_chip_permutation(allow_conditional_attacks = True)
 					new_chip = chip_map[old_chip]
-					new_code = get_new_code(old_chip, old_code, new_chip)
+					new_code = random.choice(chips.lookup(new_chip).codes)
 				new_reward = new_chip + (new_code << 9)
 				rom.write_halfword(new_reward)
 
@@ -182,7 +217,7 @@ def randomize_virus_drops():
 				for old_offset in zenny_queue:
 					chip_map = generate_chip_permutation(allow_conditional_attacks = True)
 					new_chip = chip_map[old_chip]
-					new_code = get_new_code(old_chip, old_code, new_chip)
+					new_code = random.choice(chips.lookup(new_chip).codes)
 					rom.write_halfword(new_chip + (new_code << 9), old_offset)
 				zenny_queue = []
 
@@ -196,7 +231,7 @@ def randomize_virus_drops():
 						old_chip, old_code = last_chip
 						chip_map = generate_chip_permutation(allow_conditional_attacks = True)
 						new_chip = chip_map[old_chip]
-						new_code = get_new_code(old_chip, old_code, new_chip)
+						new_code = random.choice(chips.lookup(new_chip).codes)
 						new_reward = new_chip + (new_code << 9)
 						rom.write_halfword(new_reward)
 	print 'randomized virus drops'
@@ -245,7 +280,7 @@ def randomize_number_trader():
 		if reward_type == 0:
 			chip_map = generate_chip_permutation()
 			new_chip = chip_map[old_chip]
-			new_code = get_new_code(old_chip, old_code, new_chip)
+			new_code = random.choice(chips.lookup(new_chip).codes)
 			new_reward = struct.pack('<BBH8s', reward_type, new_code, new_chip, encrypted_number)
 			rom.write(new_reward)
 		n_rewards += 1
@@ -271,10 +306,11 @@ def main(rom_path, output_path):
 	randomize_gmds()
 	randomize_shops()
 	randomize_number_trader()
-	# rape_mode()
+	rape_mode()
 
 	bn3.write_all(rom)
 	open(output_path, 'wb').write(''.join(rom.buffer))
+	print 'rom created'
 
 
 if __name__ == '__main__':
