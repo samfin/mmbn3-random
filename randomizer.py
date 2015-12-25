@@ -19,6 +19,8 @@ def init_rom_data(rom_path):
 	rom = Rom(rom_path)
 
 def virus_replace(ind):
+	if ind == 255:
+		return ind
 	# Ignore navis for now, except for invincible Bass1
 	old_enemy = enemies.lookup(ind)
 	if old_enemy.name == 'Bass1':
@@ -251,8 +253,10 @@ def randomize_shops():
 	n_shops = 0
 	# white only: blue is 0x43dbc
 	item_data_offset = 0x44bc8
+	# item_data_offset = 0x43dbc
 	first_shop = None
 	for match in shop_regex.finditer(rom.rom_data):
+		print match.start()
 		shop_offset = match.start()
 		n_shops += 1
 		currency, filler, first_item, n_items = struct.unpack('<IIII', rom.read(16, shop_offset))
@@ -269,6 +273,7 @@ def randomize_shops():
 			# We only care about chips
 			if item_type == 2:
 				chip_map = generate_chip_permutation()
+				print old_chip, old_code
 				new_chip = chip_map[old_chip]
 				new_code = random.choice(chips.lookup(new_chip).codes)
 				new_item = struct.pack('<BBHBBH', item_type, stock, new_chip, new_code, filler, price)
@@ -280,7 +285,8 @@ def randomize_shops():
 
 def randomize_number_trader():
 	# 3e 45 cc 86 90 18 4f 09 61 e9
-	rom.seek(0x47928)
+	# rom.seek(0x47928)
+	rom.seek(0x47910)
 	n_rewards = 0
 	while True:
 		reward_type, old_code, old_chip, encrypted_number = struct.unpack('<BBH8s', rom.read(12))
@@ -296,7 +302,8 @@ def randomize_number_trader():
 	print 'randomized %d number trader rewards' % n_rewards
 
 def rape_mode():
-	offset = 0x2b16a
+	# offset = 0x2b16a
+	offset = 0x2b152
 	magic = 0x2164
 	rom.write_halfword(magic, offset)
 	print 'you are so fucked'
@@ -312,8 +319,8 @@ def main(rom_path, output_path):
 	randomize_viruses()
 	randomize_folders()
 	randomize_virus_drops()
-	randomize_gmds()
-	randomize_shops()
+	# randomize_gmds()
+	# randomize_shops()
 	randomize_number_trader()
 	rape_mode()
 
@@ -323,4 +330,4 @@ def main(rom_path, output_path):
 
 
 if __name__ == '__main__':
-	main('white.gba', 'random.gba')
+	main('underking.gba', 'random.gba')

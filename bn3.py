@@ -210,8 +210,8 @@ def write_gmds(rom):
 def load_all(rom):
 	load_enemies(rom)
 	load_chips(rom)
-	load_gmds(rom)
+	# load_gmds(rom)
 
 def write_all(rom):
 	write_chips(rom)
-	write_gmds(rom)
+	# write_gmds(rom)
